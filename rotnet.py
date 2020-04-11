@@ -152,7 +152,8 @@ class RotNet(object):
     def restore_from_checkpoint(self):
         #TODO: restore the weights of the model from a given checkpoint
         #this function should return the latest epoch from training (you can get this from the name of the checkpoint file)
-        ...
+        checkpoint = tf.compat.v1.train.latest_checkpoint('./')
+        self.saver.restore(self.sess, checkpoint)        
         return
 
     def save_checkpoint(self, global_step, epoch):
