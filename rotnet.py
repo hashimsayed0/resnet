@@ -119,11 +119,7 @@ class RotNet(object):
             self.sess.run([self.iterator.initializer], feed_dict={self.x_input: X_train, self.y_input: y_train})
             for batch in range(int(num_batches)):
                 self._update_learning_rate(epoch)
-
                 o, loss, accuracy = self.sess.run([self.optimizer, self.loss, self.accuracy])
-
-                #print(self.logits.eval())
-
                 #TODO: Make sure you are using the tensorflow add_summary method to add the data for each batch to Tensorboard
                 #self.train_writer.add_summary(loss)
                 #self.train_writer.add_summary(accuracy)
@@ -132,6 +128,7 @@ class RotNet(object):
 
                 step += 1
             #TODO: Calculate validation accuracy and loss
+            y_val = tf.keras.utils.to_categorical(y_val)
             self.sess.run(self.iterator.initializer, feed_dict={self.x_input: X_val, self.y_input: y_val})
             #TODO: Use the save_checkpoint method below to save your model weights to disk.
             self.save_checkpoint(step, epoch)
@@ -146,8 +143,13 @@ class RotNet(object):
 
     def predict(self, image_path):
         #TODO: Once you have trained your model, you should be able to run inference on a single image by reloading the weights
-        ...
-        return
+        self.saver = tf.compat.v1.train.import_meta_graph('my-model.meta')
+        self.restore_from_checkpoint()
+        img = cv2.imread(image_path)
+        img = np.expand_dims(img, axis=0)
+        logits = self.model.forward(img)
+        pred_class = tf.argmax(tf.nn.softmax(logits), axis=1)
+        return self.classes[pred_class]
 
     def restore_from_checkpoint(self):
         #TODO: restore the weights of the model from a given checkpoint
@@ -158,9 +160,10 @@ class RotNet(object):
 
     def save_checkpoint(self, global_step, epoch):
         #TODO: This function should save the model weights. If we are on the first epoch it should also save the graph.
-        self.saver.save()
-        if not os.path.exists("./checkpoints/model{0}".format(epoch)):
-            os.mkdir("./checkpoints/model{0}".format(epoch))
+        if epoch == 0:
+            self.saver.save(self.sess, 'my-model', global_step=global_step)
+        else:
+            self.saver.save(self.sess, 'my-model', global_step=global_step, write_meta_graph=False)
         return
 
     def _update_learning_rate(self, epoch):
