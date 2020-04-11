@@ -28,12 +28,10 @@ class Data(object):
     def get_training_data(self):
         print("[INFO] Getting Training Data")
         #TODO: This function should return the training images and labels. You can use the helper functions for this.
-        images = []
-        labels = []
+        images = np.array([])
         for i in range(1,6):
-            images.append(self._get_next_batch_from_file(i)[b'data'])
-            labels.append(self._get_next_batch_from_file(i)[b'labels'])
-        return self.convert_images(np.concatenate(images)), np.concatenate(labels)
+            images = np.append(images, self._get_next_batch_from_file(i)[b'data'])
+        return self.convert_images(images), None
 
     def convert_images(self, raw_images):
         #This function normalizes the input images and converts them to the appropriate shape: batch_size x height x width x channels

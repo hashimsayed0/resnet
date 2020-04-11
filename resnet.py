@@ -17,11 +17,11 @@ class ResNet():
             down = 2
 
         #TODO: Implement one residual block (Convolution, batch_norm, relu)
-        input = tf.keras.layers.Conv2D(filters=out_channels, kernel_size=3, strides=down, padding="SAME")(input)
+        input = tf.keras.layers.Conv2D(filters=out_channels, kernel_size=3, strides=down, padding='same')(input)
         input = tf.keras.layers.BatchNormalization()(input)
         input = tf.nn.relu(input)
 
-        input = tf.keras.layers.Conv2D(filters=out_channels, kernel_size=3, strides=1, padding="SAME")(input)
+        input = tf.keras.layers.Conv2D(filters=out_channels, kernel_size=3, strides=1, padding='same')(input)
         input = tf.keras.layers.BatchNormalization()(input)
 
         #TODO: Add the skip connection and ReLU the output
@@ -60,7 +60,6 @@ class ResNet():
                         output_channels,
                         padding):
         #TODO: Implement a convolutional layer with the above specifications
-        #return tf.keras.layers.Conv2D(filters=output_channels, kernel_size=filter_size, strides=1, padding=padding, input_shape=(input_channels, input_channels, 3), name=name)
         return tf.nn.conv2d(input, filter=filter_size, padding=padding, strides=None, filters=output_channels, name=name, input_shape=input_channels)
 
 

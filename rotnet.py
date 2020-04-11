@@ -36,7 +36,7 @@ class RotNet(object):
         print(device_lib.list_local_devices())
 
         #This collects the add_summary operations that you defined in the graph. You should be saving your metrics to self.summary
-        self.summary = tf.summary.merge_all()
+        self.summary = tf.compat.v1.summary.merge_all()
 
     def _populate_model_hyperparameters(self):
         """
@@ -73,8 +73,8 @@ class RotNet(object):
         y_cls = tf.argmax(labels, axis=1)
         self.accuracy = tf.reduce_mean(tf.cast(tf.equal(y_pred_cls, y_cls), tf.float32))
 
-        tf.summary.scalar('loss', tensor=self.loss)
-        tf.summary.scalar('accuracy', tensor=self.accuracy)
+        tf.compat.v1.summary.scalar('loss', tensor=self.loss)
+        tf.compat.v1.summary.scalar('accuracy', tensor=self.accuracy)
         self.summary_op = tf.compat.v1.summary.merge_all()
         #END OF FUNCTION
 
@@ -91,8 +91,8 @@ class RotNet(object):
             self.start_epoch = 0
 
         #Creates a writer for Tensorboard
-        self.train_writer = tf.summary.FileWriter("./logs/train/" + str(self.model_number), self.sess.graph)
-        self.saver = tf.train.Saver()
+        self.train_writer = tf.compat.v1.summary.FileWriter("./logs/train/" + str(self.model_number), self.sess.graph)
+        self.saver = tf.compat.v1.train.Saver()
 
     def train(self):
         #TODO: Initialize your graph variables
@@ -121,8 +121,8 @@ class RotNet(object):
                 self._update_learning_rate(epoch)
                 o, loss, accuracy = self.sess.run([self.optimizer, self.loss, self.accuracy])
                 #TODO: Make sure you are using the tensorflow add_summary method to add the data for each batch to Tensorboard
-                #self.train_writer.add_summary(loss)
-                #self.train_writer.add_summary(accuracy)
+                self.train_writer.add_summary(tf.compat.v1.Summary(value=[tf.compat.v1.Summary.Value(tag="loss", simple_value=loss)]))
+                self.train_writer.add_summary(tf.compat.v1.Summary(value=[tf.compat.v1.Summary.Value(tag="accuracy", simple_value=accuracy)]))
 
                 print("Epoch: {0}, Batch: {1} ==> Accuracy: {2}, Loss: {3}".format(epoch, batch, accuracy, loss))
 
@@ -145,11 +145,13 @@ class RotNet(object):
         #TODO: Once you have trained your model, you should be able to run inference on a single image by reloading the weights
         self.saver = tf.compat.v1.train.import_meta_graph('my-model.meta')
         self.restore_from_checkpoint()
-        img = cv2.imread(image_path)
-        img = np.expand_dims(img, axis=0)
-        logits = self.model.forward(img)
-        pred_class = tf.argmax(tf.nn.softmax(logits), axis=1)
-        return self.classes[pred_class]
+
+        image = cv2.imread(image_path)
+        image = np.expand_dims(image, axis=0)
+        logits = self.model.forward(image)
+        Y_pred = tf.nn.softmax(logits)
+        pred_class = tf.argmax(Y_pred, axis=1)
+        return str(pred_class * 90)
 
     def restore_from_checkpoint(self):
         #TODO: restore the weights of the model from a given checkpoint
@@ -161,9 +163,11 @@ class RotNet(object):
     def save_checkpoint(self, global_step, epoch):
         #TODO: This function should save the model weights. If we are on the first epoch it should also save the graph.
         if epoch == 0:
-            self.saver.save(self.sess, 'my-model', global_step=global_step)
+            self.saver.save(self.sess, 'my-model', global_step=global_step, write_meta_graph=True)
         else:
             self.saver.save(self.sess, 'my-model', global_step=global_step, write_meta_graph=False)
+        if not os.path.exists("./checkpoints/model{0}".format(self.model_number)):
+            os.makedirs("./checkpoints/model{0}".format(self.model_number))
         return
 
     def _update_learning_rate(self, epoch):
