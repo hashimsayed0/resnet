@@ -12,16 +12,16 @@ class ResNet():
         down = 1
         if in_channels != out_channels:
             # TODO: perform 1x1 convolution to match output dimensions for skip connection
-            skip = tf.keras.layers.Conv2D(filters=out_channels, kernel_size=1, strides=2, padding='same')(skip)
+            skip = tf.keras.layers.Conv2D(filters=out_channels, kernel_size=1, strides=2, padding='same', kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False))(skip)
             skip = tf.keras.layers.BatchNormalization()(skip)
             down = 2
 
         #TODO: Implement one residual block (Convolution, batch_norm, relu)
-        input = tf.keras.layers.Conv2D(filters=out_channels, kernel_size=3, strides=down, padding='same')(input)
+        input = tf.keras.layers.Conv2D(filters=out_channels, kernel_size=3, strides=down, padding='same', kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False))(input)
         input = tf.keras.layers.BatchNormalization()(input)
         input = tf.nn.relu(input)
 
-        input = tf.keras.layers.Conv2D(filters=out_channels, kernel_size=3, strides=1, padding='same')(input)
+        input = tf.keras.layers.Conv2D(filters=out_channels, kernel_size=3, strides=1, padding='same', kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False))(input)
         input = tf.keras.layers.BatchNormalization()(input)
 
         #TODO: Add the skip connection and ReLU the output
@@ -30,11 +30,11 @@ class ResNet():
 
     def forward(self, data):
         #TODO: 64 7x7 convolutions followed by batchnorm, relu, 3x3 maxpool with stride 2
-        data = tf.keras.layers.Conv2D(filters=64, name='conv_layer_0', kernel_size=7, strides=2, input_shape=(32, 32, 3,), padding="same")(data)
+        #data = tf.keras.layers.Conv2D(filters=64, name='conv_layer_0', kernel_size=7, strides=2, input_shape=(32, 32, 3,), padding="same", kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False))(data)
+        data = self.add_convolution(data, 'conv_layer_0', 7, 32, 64, 'same')(data)
         data = tf.keras.layers.BatchNormalization()(data)
         data = tf.keras.layers.Activation('relu')(data)
         data = tf.keras.layers.MaxPooling2D(pool_size=(3, 3), padding='same', strides=2)(data)
-
         #TODO: Add residual blocks of the appropriate size. See the diagram linked in the README for more details on the architecture.
         # Use the add_residual_block helper function
         data = self.add_residual_block(data, 1, 64, 64)
@@ -46,10 +46,11 @@ class ResNet():
         data = self.add_residual_block(data, 7, 256, 512)
         data = self.add_residual_block(data, 8, 512, 512)
 
+        print(data.shape)
         #TODO: perform global average pooling on each feature map to get 4 output channels
         data = tf.keras.layers.GlobalAveragePooling2D()(data)
+        #print(data.shape)
         logits = tf.keras.layers.Dense(4)(data)
-        logits = tf.nn.softmax(logits)
         return logits
 
     def add_convolution(self,
@@ -60,7 +61,7 @@ class ResNet():
                         output_channels,
                         padding):
         #TODO: Implement a convolutional layer with the above specifications
-        return tf.nn.conv2d(input, filter=filter_size, padding=padding, strides=None, filters=output_channels, name=name, input_shape=input_channels)
+        return tf.keras.layers.Conv2D(filters=output_channels, kernel_size=filter_size, strides=2, padding=padding, name=name, input_shape=(input_channels, input_channels, 3), kernel_initializer=tf.contrib.layers.xavier_initializer(uniform=False))
 
 
 
