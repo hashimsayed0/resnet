@@ -10,7 +10,6 @@ import shutil
 
 class RotNet(object):
     def __init__(self, sess, args):
-        #TODO: Look through this function to see which attributes have already been initalized for you.
         print("[INFO] Reading configuration file")
         self.config = yaml.load(open(args.config, 'r'), Loader=yaml.FullLoader)
 
@@ -52,18 +51,16 @@ class RotNet(object):
         self.num_epochs = self.config["num_epochs"]
 
     def build_base_graph(self):
-        #TODO: Initialize your dataloader here using tf.data by calling "get_rot_data_iterator"
+        #Initialize your dataloader here using tf.data by calling "get_rot_data_iterator"
         self.x_input = tf.compat.v1.placeholder(tf.float32, [None, 32, 32, 3])
         self.y_input = tf.compat.v1.placeholder(tf.float32, [None, 4])
 
         self.iterator = self.data_obj.get_rot_data_iterator(self.x_input, self.y_input, self.batch_size)
         images, labels = self.iterator.get_next()
 
-        #TODO: Construct the Resnet in resnet.py
         logits = self.model.forward(images)
-        # self.out = logits
 
-        #TODO: Calculate the loss and accuracy from your output logits.
+        # Calculate the loss and accuracy from your output logits.
         # Add your accuracy metrics and loss to the tensorboard summary using tf.summary
         entropy = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels, logits=logits)
         self.loss = tf.reduce_mean(entropy)
@@ -79,13 +76,12 @@ class RotNet(object):
         #END OF FUNCTION
 
     def build_train_graph(self):
-        #TODO: Create an optimizer that minimizes the loss function that you defined in the above function
+        #Create an optimizer that minimizes the loss function that you defined in the above function
         self.optimizer = tf.compat.v1.train.AdamOptimizer(self.learning_rate).minimize(self.loss)
 
         #This will restore a model @ the latest epoch if you have already started training
         #If it cannot find a checkpoint, it will set the starting epoch to zero
         if os.path.exists("./checkpoints/model{0}".format(self.model_number)):
-            #TODO: Complete the restore from checkpoint function
             self.start_epoch = self.restore_from_checkpoint()
         else:
             self.start_epoch = 0
@@ -95,15 +91,14 @@ class RotNet(object):
         self.saver = tf.compat.v1.train.Saver()
 
     def train(self):
-        #TODO: Initialize your graph variables
+        # Initialize your graph variables
         self.sess.run([tf.compat.v1.global_variables_initializer()])    
 
-        #TODO: Implement and call the get_training_data function to get the data from disk
-        #NOTE: Depending on how you implement your iterator, you may not need to load the data here.
+        #Implement and call the get_training_data function to get the data from disk
         x, y = self.data_obj.get_training_data()
         x, y = self.data_obj.preprocess(x)
 
-        #TODO: Split the data into a training and validation set: see sklearn train_test_split
+        #TSplit the data into a training and validation set: see sklearn train_test_split
         X_train, X_val, y_train, y_val = train_test_split(x, y, test_size=0.33)
         y_train = tf.keras.utils.to_categorical(y_train, num_classes=4)
         y_val = tf.keras.utils.to_categorical(y_val, num_classes=4)
@@ -118,27 +113,24 @@ class RotNet(object):
 
         num_batches = X_train.shape[0] / self.batch_size
         step = 1
-        #TODO: Implement the training and validation loop and checkpoint your file at each epoch
+        # Implement the training and validation loop and checkpoint your file at each epoch
         print("[INFO] Starting Training...")
         for epoch in range(self.start_epoch, self.num_epochs):
             self.sess.run([self.iterator.initializer], feed_dict={self.x_input: X_train, self.y_input: y_train})
             for batch in range(int(num_batches)):
                 self._update_learning_rate(epoch)
                 o, loss, accuracy = self.sess.run([self.optimizer, self.loss, self.accuracy])
-                #TODO: Make sure you are using the tensorflow add_summary method to add the data for each batch to Tensorboard
                 self.train_writer.add_summary(tf.compat.v1.Summary(value=[tf.compat.v1.Summary.Value(tag="loss", simple_value=loss)]))
                 self.train_writer.add_summary(tf.compat.v1.Summary(value=[tf.compat.v1.Summary.Value(tag="accuracy", simple_value=accuracy)]))
 
-                # print(self.out.eval())
                 print("Epoch: {0}, Batch: {1} ==> Accuracy: {2}, Loss: {3}".format(epoch, batch, accuracy, loss))
                 step += 1
-            #TODO: Calculate validation accuracy and loss
+            # Calculate validation accuracy and loss
             self.sess.run(self.iterator.initializer, feed_dict={self.x_input: X_val, self.y_input: y_val})
             print("Epoch: {0}, Validation ==> Accuracy: {1}, Loss: {2}".format(epoch, accuracy, loss))
-            #TODO: Use the save_checkpoint method below to save your model weights to disk.
             self.save_checkpoint(step, epoch)
 
-        #TODO: Evaluate your data on the test set after training
+        #Evaluate your data on the test set after training
         images, labels = self.data_obj.get_test_data()
         X_test, y_test = self.data_obj.preprocess(images)
         y_test = tf.keras.utils.to_categorical(y_test)
@@ -147,7 +139,6 @@ class RotNet(object):
         print("Test accuracy:" + str(accuracy))
 
     def predict(self, image_path):
-        #TODO: Once you have trained your model, you should be able to run inference on a single image by reloading the weights
         self.restore_from_checkpoint()
         image = cv2.imread(image_path)
         image = self.data_obj.convert_images(image)
@@ -157,15 +148,12 @@ class RotNet(object):
         return str(pred_class * 90)
 
     def restore_from_checkpoint(self):
-        #TODO: restore the weights of the model from a given checkpoint
-        #this function should return the latest epoch from training (you can get this from the name of the checkpoint file)
         self.saver = tf.compat.v1.train.import_meta_graph('my-model-{0}.meta'.format(self.model_number))
         checkpoint = tf.compat.v1.train.latest_checkpoint('./')
         self.saver.restore(self.sess, checkpoint)        
         return 0
 
     def save_checkpoint(self, global_step, epoch):
-        #TODO: This function should save the model weights. If we are on the first epoch it should also save the graph.
         if epoch == 0:
             self.path = self.saver.save(self.sess, 'my-model', global_step=global_step, write_meta_graph=True)
         else:
